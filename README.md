@@ -5,9 +5,7 @@
 ```
 data/raw/supply_chain_dataset1.csv
 ```
-
-> TODO：把下方換成你實際使用的 Kaggle 資料集名稱與連結，並確認該資料集的授權條款。
-> Dataset: `<名稱>` — https://www.kaggle.com/datasets/<owner>/<dataset>
+> Dataset: `<名稱>` — [https://www.kaggle.com/datasets/<owner>/<dataset>](https://www.kaggle.com/datasets/srisyra02/amazon-product-sales-data-42k-items-2025/data)
 
 ## 預期欄位（15 欄）
 
