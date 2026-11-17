@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supply Chain Inventory Risk Dashboard</title>
+<style>
+:root{
+  --bg:#f6f7f9;--surface:#fff;--text:#1b1f24;--muted:#5d6672;--border:#dde1e6;
+  --accent:#2b6cb0;--a:#2b6cb0;--b:#d69e2e;--c:#a0aec0;
+  --high:#c53030;--med:#dd8a1f;--low:#2f855a;
+  --heat0:#eef4fb;--heat1:#c53030;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#14171b;--surface:#1c2025;--text:#e8eaed;--muted:#9aa4b0;--border:#2d333b;
+    --accent:#63a4e8;--a:#63a4e8;--b:#e6b84f;--c:#6b7685;
+    --high:#f07178;--med:#f0a850;--low:#5fc08b;--heat0:#222a33;--heat1:#f07178;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14171b;--surface:#1c2025;--text:#e8eaed;--muted:#9aa4b0;--border:#2d333b;
+  --accent:#63a4e8;--a:#63a4e8;--b:#e6b84f;--c:#6b7685;
+  --high:#f07178;--med:#f0a850;--low:#5fc08b;--heat0:#222a33;--heat1:#f07178;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+header{padding:28px 20px 8px;max-width:1180px;margin:0 auto;display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px}
+main{max-width:1180px;margin:0 auto;padding:8px 20px 56px}
+section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-top:16px}
+h2{font-size:16px;margin:0 0 4px}
+.note{color:var(--muted);font-size:13px;margin:0 0 14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kpi{border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.kpi .v{font-size:24px;font-weight:600}
+.kpi .l{color:var(--muted);font-size:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+.bar-row{display:grid;grid-template-columns:70px 1fr 120px;gap:10px;align-items:center;margin:8px 0;font-size:13px}
+.bar-track{background:var(--bg);border-radius:4px;height:22px;overflow:hidden}
+.bar-fill{height:100%}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.tablewrap{overflow-x:auto;max-height:460px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+th{position:sticky;top:0;background:var(--surface);cursor:pointer;user-select:none;font-weight:600}
+th.asc::after{content:" ▲";font-size:10px}th.desc::after{content:" ▼";font-size:10px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+select,input[type=text],button{font:inherit;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)}
+button{cursor:pointer}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;color:#fff}
+.pill.High{background:var(--high)}.pill.Medium{background:var(--med)}.pill.Low{background:var(--low)}
+.abc{font-weight:700}
+.abc.A{color:var(--a)}.abc.B{color:var(--b)}.abc.C{color:var(--c)}
+.scen{display:grid;grid-template-columns:90px repeat(3,1fr);gap:6px;max-width:520px;font-size:13px;align-items:stretch}
+.scen .h{color:var(--muted);text-align:center;align-self:center}
+.cell{border:2px solid transparent;border-radius:8px;padding:12px 6px;text-align:center;cursor:pointer;font-weight:600;color:var(--text)}
+.cell.sel{border-color:var(--accent)}
+.cell small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.heatwrap{overflow:auto;max-height:420px;border:1px solid var(--border);border-radius:8px}
+.heat{border-collapse:separate;border-spacing:2px;font-size:11px;width:100%}
+.heat th,.heat td{padding:3px 6px;text-align:center;border:0}
+.heat td.v{border-radius:3px;min-width:52px}
+.warn{border-left:4px solid var(--med);background:var(--bg);padding:10px 14px;border-radius:4px;font-size:13px;margin-top:10px}
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty code{background:var(--bg);padding:2px 6px;border-radius:4px}
+ul.lim{margin:6px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
+.theme{font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Supply Chain Inventory Risk &amp; Decision Support</h1>
+    <div class="sub" id="meta-line">載入中…</div>
+  </div>
+  <button class="theme" id="theme-btn" type="button">切換深／淺色</button>
+</header>
+<main id="app"></main>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+  const D = window.DASHBOARD_DATA;
+  const app = document.getElementById("app");
+  const METRIC = "days_supply_below_lead_time_rate";
+
+  // ---------- theme toggle ----------
+  const root = document.documentElement;
+  document.getElementById("theme-btn").addEventListener("click", () => {
+    const cur = root.getAttribute("data-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+  });
+
+  if (!D) {
+    document.getElementById("meta-line").textContent = "尚未產生資料";
+    app.innerHTML = '<section class="empty"><p>找不到分析結果。</p>' +
+      '<p>請先下載資料集並執行 <code>python run_pipeline.py</code>，' +
+      '產生 <code>docs/data.js</code> 後重新整理本頁。</p></section>';
+    return;
+  }
+
+  // ---------- helpers ----------
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const pct = (v, d = 1) => v == null ? "–" : (v * 100).toFixed(d) + "%";
+  const num = (v, d = 0) => v == null ? "–" : Number(v).toLocaleString("en-US", {minimumFractionDigits: d, maximumFractionDigits: d});
+  const mix = (t) => `color-mix(in srgb, var(--heat1) ${Math.round(Math.min(1, Math.max(0, t)) * 100)}%, var(--heat0))`;
+  const M = D.meta;
+
+  document.getElementById("meta-line").textContent =
+    `資料：${M.source_file}・${M.date_min} ~ ${M.date_max}・${M.rows.toLocaleString()} 筆觀測・產生時間 ${M.generated_at}`;
+
+  const countBy = (arr, key) => arr.reduce((o, r) => (o[r[key]] = (o[r[key]] || 0) + 1, o), {});
+  const prio = countBy(D.risk, "action_priority");
+  const p1 = prio["P1 - Immediate Review"] || 0;
+  const abcA = D.abc_summary.find(r => r.abc_class === "A");
+
+  // ---------- KPI ----------
+  let html = `<section><div class="kpis">
+    <div class="kpi"><div class="v">${M.n_sku}</div><div class="l">SKU</div></div>
+    <div class="kpi"><div class="v">${M.n_warehouse}</div><div class="l">倉庫</div></div>
+    <div class="kpi"><div class="v">${M.n_pairs}</div><div class="l">SKU × 倉庫組合</div></div>
+    <div class="kpi"><div class="v">${pct(M.overall_below_rop_rate)}</div><div class="l">觀測日庫存低於 ROP 比例</div></div>
+    <div class="kpi"><div class="v">${pct(M.overall_stockout_rate, 2)}</div><div class="l">stockout_flag 平均值</div></div>
+    <div class="kpi"><div class="v">${p1}</div><div class="l">P1 立即檢視組合</div></div>
+    ${abcA ? `<div class="kpi"><div class="v">${abcA.sku_count} SKU</div><div class="l">A 類（占消耗價值 ${num(abcA.value_share_pct, 1)}%）</div></div>` : ""}
+  </div></section>`;
+
+  // ---------- ABC ----------
+  const colors = {A: "var(--a)", B: "var(--b)", C: "var(--c)"};
+  const maxShare = Math.max(...D.abc_summary.map(r => r.value_share_pct));
+  const maxCnt = Math.max(...D.abc_summary.map(r => r.sku_count));
+  const shareBars = D.abc_summary.map(r => `<div class="bar-row"><b class="abc ${r.abc_class}">${r.abc_class} 類</b>
+    <div class="bar-track"><div class="bar-fill" style="width:${r.value_share_pct / maxShare * 100}%;background:${colors[r.abc_class]}"></div></div>
+    <span>${num(r.value_share_pct, 1)}% 價值</span></div>`).join("");
+  const cntBars = D.abc_summary.map(r => `<div class="bar-row"><b class="abc ${r.abc_class}">${r.abc_class} 類</b>
+    <div class="bar-track"><div class="bar-fill" style="width:${r.sku_count / maxCnt * 100}%;background:${colors[r.abc_class]}"></div></div>
+    <span>${r.sku_count} 個 SKU</span></div>`).join("");
+
+  // Pareto curve (SVG)
+  const W = 520, H = 220, L = 38, B = 26, T = 10, R = 10;
+  const n = D.abc_curve.length;
+  const px = i => L + (i + 1) / n * (W - L - R);
+  const py = v => T + (1 - v / 100) * (H - T - B);
+  const pts = D.abc_curve.map((r, i) => `${px(i).toFixed(1)},${py(r.cumulative_value_pct).toFixed(1)}`).join(" ");
+  const grid = [0, 25, 50, 80, 95, 100].map(v => `<line x1="${L}" x2="${W - R}" y1="${py(v)}" y2="${py(v)}" stroke="var(--border)" stroke-dasharray="${v === 80 || v === 95 ? "4 3" : ""}"/>
+    <text x="${L - 6}" y="${py(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${v}%</text>`).join("");
+  const dots = D.abc_curve.map((r, i) => `<circle cx="${px(i)}" cy="${py(r.cumulative_value_pct)}" r="2.5" fill="${colors[r.abc_class]}"><title>${esc(r.sku)}：累積 ${num(r.cumulative_value_pct, 1)}%</title></circle>`).join("");
+  const pareto = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="ABC 累積消耗價值曲線">
+    ${grid}<polyline points="${pts}" fill="none" stroke="var(--muted)" stroke-width="1.2"/>${dots}
+    <text x="${W / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="var(--muted)">SKU 依年消耗價值由高到低排序（共 ${n} 個）</text></svg>`;
+
+  html += `<section><h2>ABC 分析</h2>
+    <p class="note">依 SKU 年消耗價值（年需求量 × 平均單位成本）排序，累積 80% / 95% 為 A / B / C 分界。此分界是本專案採用的常見規則，並非通用標準。</p>
+    <div class="grid2"><div><b style="font-size:13px">消耗價值占比</b>${shareBars}<div style="height:10px"></div><b style="font-size:13px">SKU 數量</b>${cntBars}</div>
+    <div><b style="font-size:13px">累積消耗價值曲線</b>${pareto}
+    <div class="legend"><span><i class="dot" style="background:var(--a)"></i>A</span><span><i class="dot" style="background:var(--b)"></i>B</span><span><i class="dot" style="background:var(--c)"></i>C</span></div></div></div></section>`;
+
+  // ---------- Risk priority table ----------
+  const whs = [...new Set(D.risk.map(r => r.warehouse))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+  html += `<section><h2>SKU × 倉庫 風險優先清單</h2>
+    <p class="note">風險指標 = 觀測日中「庫存覆蓋天數 &lt; 供應商交期」的比例（風險代理指標，<b>不是缺貨機率</b>）。分級採相對分位數：High ≥ P80（${pct(M.p80, 2)}），Medium 為大於 0 且低於 P80，Low 為 0。P1 = A 類且 High。點欄位標題可排序。</p>
+    <div class="controls">
+      <select id="f-prio"><option value="">全部優先級</option><option>P1 - Immediate Review</option><option>P2 - Review</option><option>P3 - Monitor</option></select>
+      <select id="f-abc"><option value="">全部 ABC</option><option>A</option><option>B</option><option>C</option></select>
+      <select id="f-wh"><option value="">全部倉庫</option>${whs.map(w => `<option>${esc(w)}</option>`).join("")}</select>
+      <input type="text" id="f-sku" placeholder="搜尋 SKU，例如 SKU_12">
+      <span class="sub" id="f-count" style="align-self:center"></span>
+    </div>
+    <div class="tablewrap"><table id="risk-table"><thead><tr></tr></thead><tbody></tbody></table></div></section>`;
+
+  // ---------- Heatmap ----------
+  html += `<section><h2>風險熱圖（SKU × 倉庫）</h2>
+    <p class="note">顏色越深代表覆蓋不足比例越高。滑鼠移到格子上可看數值。</p>
+    <div class="heatwrap"><table class="heat" id="heat"></table></div></section>`;
+
+  // ---------- Scenario ----------
+  html += `<section><h2>情境分析：需求上升 × 交期延長</h2>
+    <p class="note">壓力測試：若需求提高、交期延長，現有庫存的覆蓋不足比例會如何變化。不是需求預測，也不保證實際營運結果。格子數值為 250 個組合（等權重）的平均覆蓋不足比例，點擊格子可查看該情境下最高風險的組合。</p>
+    <div id="scen-grid" class="scen"></div>
+    <div id="scen-detail" style="margin-top:16px"></div></section>`;
+
+  // ---------- Validation ----------
+  const sbr = D.stockout_by_risk;
+  const noVariation = M.stockout_unique_values <= 1;
+  html += `<section><h2>風險分級與缺貨標記的一致性檢查</h2>
+    <p class="note">檢查不同風險級別的 stockout_flag 比例是否不同。這只是初步檢查，不能證明因果或預測能力。</p>
+    <div class="tablewrap" style="max-height:none"><table><thead><tr><th>風險級別</th><th>觀測數</th><th>缺貨標記數</th><th>缺貨標記比例</th><th>平均覆蓋不足比例</th></tr></thead><tbody>
+    ${sbr.map(r => `<tr><td><span class="pill ${esc(r.risk_level)}">${esc(r.risk_level)}</span></td><td>${num(r.observations)}</td><td>${num(r.stockout_observations)}</td><td>${pct(r.stockout_rate, 2)}</td><td>${pct(r.avg_coverage_shortfall_rate, 2)}</td></tr>`).join("")}
+    </tbody></table></div>
+    ${noVariation ? `<div class="warn"><b>無法驗證：</b>此資料的 stockout_flag 只有單一取值（整體平均 ${pct(M.overall_stockout_rate, 2)}），沒有變異，因此無法用它檢驗風險分級是否能區分缺貨風險。目前的風險分級只代表「相對排序」，尚未被驗證。</div>` : ""}</section>`;
+
+  // ---------- Supplier / warehouse ----------
+  html += `<section><h2>供應商與倉庫 KPI</h2><div class="grid2">
+    <div><b style="font-size:13px">供應商</b><div class="tablewrap" style="max-height:340px"><table><thead><tr><th>供應商</th><th>平均交期</th><th>總需求</th><th>低於 ROP</th></tr></thead><tbody>
+    ${D.supplier_kpi.map(r => `<tr><td>${esc(r.supplier)}</td><td>${num(r.avg_lead_time, 1)}</td><td>${num(r.total_demand)}</td><td>${pct(r.below_rop_rate, 1)}</td></tr>`).join("")}</tbody></table></div></div>
+    <div><b style="font-size:13px">倉庫</b><div class="tablewrap" style="max-height:340px"><table><thead><tr><th>倉庫</th><th>平均庫存覆蓋天數</th><th>總需求</th><th>低於 ROP</th></tr></thead><tbody>
+    ${D.warehouse_kpi.map(r => `<tr><td>${esc(r.warehouse)}</td><td>${num(r.avg_days_of_supply, 1)}</td><td>${num(r.total_demand)}</td><td>${pct(r.below_rop_rate, 1)}</td></tr>`).join("")}</tbody></table></div></div></div></section>`;
+
+  // ---------- Limitations ----------
+  html += `<section><h2>解讀與限制</h2><ul class="lim">
+    <li>7 日滾動平均需求使用 <code>min_periods=7</code>，每個 SKU × 倉庫的前 6 筆觀測沒有庫存覆蓋天數，不納入風險比例計算（不代表沒有風險）。</li>
+    <li>ABC 以 SKU 跨倉庫彙總計算，同一 SKU 在各倉庫的 ABC 類別相同。</li>
+    <li>風險級別是相對於本資料分布的分位數規則；上線前應依實際缺貨成本與營運資料校準。</li>
+    <li>資料來源為公開 Kaggle 資料集，分析結果僅作為方法示範，不代表任何真實企業的營運狀況。</li></ul></section>`;
+
+  app.innerHTML = html;
+
+  // ================= interactive: risk table =================
+  const cols = [
+    ["sku", "SKU", v => esc(v)],
+    ["warehouse", "倉庫", v => esc(v)],
+    ["abc_class", "ABC", v => `<span class="abc ${esc(v)}">${esc(v)}</span>`],
+    ["risk_level", "風險", v => `<span class="pill ${esc(v)}">${esc(v)}</span>`],
+    ["action_priority", "優先級", v => esc(v)],
+    [METRIC, "覆蓋不足比例", v => pct(v)],
+    ["below_rop_rate", "低於 ROP", v => pct(v)],
+    ["avg_days_of_supply", "平均覆蓋天數", v => num(v, 1)],
+    ["avg_lead_time", "平均交期", v => num(v, 1)],
+    ["days_supply_gap", "天數差", v => num(v, 1)],
+    ["avg_forecast_accuracy", "預測準確度", v => pct(v)],
+    ["stockout_observations", "缺貨標記", v => num(v)],
+    ["annual_consumption_value", "年消耗價值", v => num(v)],
+  ];
+  const thead = document.querySelector("#risk-table thead tr");
+  const tbody = document.querySelector("#risk-table tbody");
+  let sortKey = null, sortDir = 1;
+  thead.innerHTML = cols.map(c => `<th data-k="${c[0]}">${c[1]}</th>`).join("");
+
+  function renderTable() {
+    const fp = document.getElementById("f-prio").value, fa = document.getElementById("f-abc").value;
+    const fw = document.getElementById("f-wh").value, fs = document.getElementById("f-sku").value.trim().toLowerCase();
+    let rows = D.risk.filter(r => (!fp || r.action_priority === fp) && (!fa || r.abc_class === fa) &&
+      (!fw || r.warehouse === fw) && (!fs || r.sku.toLowerCase().includes(fs)));
+    if (sortKey) {
+      rows = rows.slice().sort((a, b) => {
+        const x = a[sortKey], y = b[sortKey];
+        if (x == null) return 1; if (y == null) return -1;
+        return (typeof x === "string" ? x.localeCompare(y, undefined, {numeric: true}) : x - y) * sortDir;
+      });
+    }
+    document.getElementById("f-count").textContent = `${rows.length} / ${D.risk.length} 筆`;
+    tbody.innerHTML = rows.slice(0, 300).map(r => `<tr>${cols.map(c => `<td>${c[2](r[c[0]])}</td>`).join("")}</tr>`).join("");
+    thead.querySelectorAll("th").forEach(th => th.className = th.dataset.k === sortKey ? (sortDir > 0 ? "asc" : "desc") : "");
+  }
+  thead.addEventListener("click", e => {
+    const th = e.target.closest("th"); if (!th) return;
+    sortDir = (sortKey === th.dataset.k) ? -sortDir : -1; sortKey = th.dataset.k; renderTable();
+  });
+  ["f-prio", "f-abc", "f-wh"].forEach(id => document.getElementById(id).addEventListener("change", renderTable));
+  document.getElementById("f-sku").addEventListener("input", renderTable);
+  renderTable();
+
+  // ================= heatmap =================
+  const abcOf = Object.fromEntries(D.abc_curve.map(r => [r.sku, r.abc_class]));
+  const skus = [...new Set(D.risk.map(r => r.sku))].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+  const cell = {}; D.risk.forEach(r => cell[r.sku + "|" + r.warehouse] = r[METRIC]);
+  const maxRate = Math.max(...D.risk.map(r => r[METRIC] ?? 0), 0.0001);
+  document.getElementById("heat").innerHTML =
+    `<thead><tr><th>SKU</th>${whs.map(w => `<th>${esc(w)}</th>`).join("")}</tr></thead><tbody>` +
+    skus.map(s => `<tr><th style="text-align:left;position:static;background:transparent;cursor:default">${esc(s)} <span class="abc ${abcOf[s]}">${abcOf[s]}</span></th>` +
+      whs.map(w => { const v = cell[s + "|" + w]; return `<td class="v" style="background:${mix((v ?? 0) / maxRate)}" title="${esc(s)} @ ${esc(w)}：${pct(v)}">${v == null ? "–" : (v * 100).toFixed(0)}</td>`; }).join("") + "</tr>").join("") + "</tbody>";
+
+  // ================= scenario =================
+  const ss = D.scenario_summary;
+  const dgs = [...new Set(ss.map(r => r.demand_growth))].sort((a, b) => a - b);
+  const lgs = [...new Set(ss.map(r => r.lead_time_growth))].sort((a, b) => a - b);
+  const maxAvg = Math.max(...ss.map(r => r.avg_shortfall_rate), 0.0001);
+  const key = (d, l) => d.toFixed(2) + "|" + l.toFixed(2);
+  const riskMap = Object.fromEntries(D.risk.map(r => [r.sku + "|" + r.warehouse, r]));
+  let selD = dgs.includes(0.1) ? 0.1 : dgs[0], selL = lgs.includes(0.2) ? 0.2 : lgs[0];
+
+  function renderScenario() {
+    let g = `<div></div>${lgs.map(l => `<div class="h">交期 +${Math.round(l * 100)}%</div>`).join("")}`;
+    dgs.forEach(d => {
+      g += `<div class="h">需求 +${Math.round(d * 100)}%</div>`;
+      lgs.forEach(l => {
+        const r = ss.find(x => x.demand_growth === d && x.lead_time_growth === l);
+        g += `<div class="cell ${d === selD && l === selL ? "sel" : ""}" data-d="${d}" data-l="${l}" style="background:${mix(r.avg_shortfall_rate / maxAvg)}">${pct(r.avg_shortfall_rate)}<small>中位數 ${pct(r.median_shortfall_rate)}・最大 ${pct(r.max_shortfall_rate)}</small></div>`;
+      });
+    });
+    document.getElementById("scen-grid").innerHTML = g;
+
+    const base = Object.fromEntries((D.scenario_detail[key(0, 0)] || []).map(r => [r[0] + "|" + r[1], r[2]]));
+    const rows = (D.scenario_detail[key(selD, selL)] || []).map(r => {
+      const k = r[0] + "|" + r[1], info = riskMap[k] || {};
+      return {sku: r[0], wh: r[1], rate: r[2], base: base[k], abc: info.abc_class, prio: info.action_priority,
+              dos: info.avg_days_of_supply, lt: info.avg_lead_time};
+    }).sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1)).slice(0, 15);
+    document.getElementById("scen-detail").innerHTML =
+      `<b style="font-size:13px">需求 +${Math.round(selD * 100)}% / 交期 +${Math.round(selL * 100)}%：覆蓋不足比例最高的 15 個組合</b>
+      <div class="tablewrap" style="max-height:none;margin-top:8px"><table><thead><tr><th>SKU</th><th>倉庫</th><th>ABC</th><th>基準情境</th><th>此情境</th><th>變化（百分點）</th><th>原優先級</th></tr></thead><tbody>` +
+      rows.map(r => `<tr><td>${esc(r.sku)}</td><td>${esc(r.wh)}</td><td><span class="abc ${esc(r.abc)}">${esc(r.abc)}</span></td><td>${pct(r.base)}</td><td>${pct(r.rate)}</td><td>${r.rate == null || r.base == null ? "–" : "+" + ((r.rate - r.base) * 100).toFixed(1)}</td><td>${esc(r.prio)}</td></tr>`).join("") +
+      "</tbody></table></div>";
+  }
+  document.getElementById("scen-grid").addEventListener("click", e => {
+    const c = e.target.closest(".cell"); if (!c) return;
+    selD = parseFloat(c.dataset.d); selL = parseFloat(c.dataset.l); renderScenario();
+  });
+  renderScenario();
+})();
+</script>
+</body>
+</html>
